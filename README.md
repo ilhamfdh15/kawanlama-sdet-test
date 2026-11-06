@@ -1,7 +1,7 @@
 Markdown
 # Kawan Lama Group SDET Technical Test
 
-[![Playwright SDET Automation Tests](https://github.com/ilhamfdh15/kawanlama-sdet-test/actions/workflows/playwright.yml/badge.svg)](https://github.com/ilhamfdh15/kawanlama-sdet-test/actions/workflows/playwright.yml)
+[![Playwright SDET Automation Tests](https://github.com/ilhamfdh15/kawanlama-sdet-test/actions/workflows/sdet-automation.yml/badge.svg)](https://github.com/ilhamfdh15/kawanlama-sdet-test/actions)
 
 This repository contains UI and API automation framework built using **Python**, **Playwright**, and **Pytest**, implementing the **Page Object Model (POM)** design pattern.
 
