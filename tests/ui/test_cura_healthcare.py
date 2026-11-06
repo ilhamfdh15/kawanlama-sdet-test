@@ -1,15 +1,24 @@
 import pytest
+import os
 from datetime import datetime, timedelta
 from playwright.sync_api import expect
+from dotenv import load_dotenv
 from pages.login_page import LoginPage
 from pages.appointment_page import AppointmentPage
+
+load_dotenv()
+
+# Fetch credentials securely from .env, with fallbacks for the reviewer if they don't set up a .env
+USERNAME = os.getenv("CURA_USERNAME", "John Doe")
+PASSWORD = os.getenv("CURA_PASSWORD", "ThisIsNotAPassword")
+BASE_URL = os.getenv("CURA_BASE_URL", "https://katalon-demo-cura.herokuapp.com")
 
 # ==========================================
 # TC 1 & TC 2: Login Scenarios
 # ==========================================
 LOGIN_DATA = [
-    ("John Doe", "ThisIsNotAPassword", True),   # TC 1: Valid Login
-    ("InvalidUser", "WrongPassword", False)     # TC 2: Invalid Login
+    (USERNAME, PASSWORD, True),               # TC 1: Valid Login
+    ("InvalidUser", "WrongPassword", False)   # TC 2: Invalid Login
 ]
 
 @pytest.mark.parametrize("username, password, is_valid", LOGIN_DATA)
@@ -18,17 +27,15 @@ def test_login_variants(page, username, password, is_valid):
     login_page.login(username, password)
 
     if is_valid:
-        # TC 1 Assertion
-        expect(page, "Login failed: User was not redirected to the appointment page after entering valid credentials.").to_have_url("https://katalon-demo-cura.herokuapp.com/#appointment")
-
+        expect(page, "Login failed").to_have_url(f"{BASE_URL}/#appointment")
         page.locator("#menu-toggle").click()
         page.locator("text=Logout").click()
     else:
-        # TC 2 Assertion
-        expect(page, "Security flow error: Invalid credentials bypassed the login screen.").to_have_url("https://katalon-demo-cura.herokuapp.com/profile.php#login")
+        expect(page, "Security flow error").to_have_url(f"{BASE_URL}/profile.php#login")
+        expect(page.locator(".text-danger"), "Login validation failed").to_be_visible()
 
-        expect(page.locator(".text-danger"), "Login validation failed: The red 'Login failed!' error message was not displayed to the user.").to_be_visible()
-
+# NOTE: For the rest of the tests (TC3 - TC6), replace the hardcoded "John Doe" and "ThisIsNotAPassword"
+# with the USERNAME and PASSWORD variables defined above. Replace URLs with f"{BASE_URL}/..."
 
 # ==========================================
 # TC 3: Successful Logout
