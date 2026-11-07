@@ -46,7 +46,7 @@ def test_login_variants(page, username, password, is_valid):
         expect(page, "Login failed").to_have_url(f"{BASE_URL}/#appointment")
         login_page.logout()
     else:
-        expect(page, "Security flow error").to_have_url(f"{BASE_URL}/profile.php#login")
+        expect(page).to_have_url(f"{BASE_URL}/profile.php#login")
         expect(page.locator(".text-danger"), "Login validation failed").to_be_visible()
 
 
