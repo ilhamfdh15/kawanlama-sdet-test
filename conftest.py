@@ -1,11 +1,44 @@
 import os
 import pytest
+import allure
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 AUTH_FILE = ".auth/state.json"
+
+# ==========================================
+# REPORTING HOOKS (Dual HTML & Allure Support)
+# ==========================================
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Captures screenshots on UI test failures and embeds them in both HTML and Allure reports."""
+    pytest_html = item.config.pluginmanager.getplugin("html")
+    outcome = yield
+    report = outcome.get_result()
+    extras = getattr(report, "extras", [])
+
+    if report.when == "call":
+        if report.failed:
+            page = item.funcargs.get("page") or item.funcargs.get("auth_page")
+            if page:
+                # 1. Capture raw screenshot bytes
+                screenshot_bytes = page.screenshot()
+
+                # 2. Attach to Allure Report
+                allure.attach(
+                    screenshot_bytes,
+                    name="Failure Screenshot",
+                    attachment_type=allure.attachment_type.PNG
+                )
+
+                # 3. Attach to Pytest-HTML Report
+                import base64
+                encoded = base64.b64encode(screenshot_bytes).decode()
+                html = f'<div><img src="data:image/png;base64,{encoded}" style="width:600px;height:auto;" onclick="window.open(this.src)" align="right"/></div>'
+                extras.append(pytest_html.extras.html(html))
+        report.extras = extras
 
 # ==========================================
 # UI AUTOMATION FIXTURES (Storage State)
@@ -65,25 +98,3 @@ def api_context(playwright):
     )
     yield request_context
     request_context.dispose()
-
-# ==========================================
-# REPORTING HOOKS
-# ==========================================
-@pytest.hookimpl(hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    """Captures screenshots on UI test failures and embeds them in the HTML report."""
-    pytest_html = item.config.pluginmanager.getplugin("html")
-    outcome = yield
-    report = outcome.get_result()
-    extras = getattr(report, "extras", [])
-
-    if report.when == "call":
-        if report.failed:
-            page = item.funcargs.get("page") or item.funcargs.get("auth_page")
-            if page:
-                screenshot = page.screenshot()
-                import base64
-                encoded = base64.b64encode(screenshot).decode()
-                html = f'<div><img src="data:image/png;base64,{encoded}" style="width:600px;height:auto;" onclick="window.open(this.src)" align="right"/></div>'
-                extras.append(pytest_html.extras.html(html))
-        report.extras = extras

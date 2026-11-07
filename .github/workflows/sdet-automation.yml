@@ -1,4 +1,4 @@
-name: Playwright SDET Automation Tests
+name: SDET Automation Pipeline
 
 on:
   push:
@@ -8,53 +8,44 @@ on:
 
 jobs:
   test:
-    timeout-minutes: 60
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip' # Upgraded: Automatically caches pip dependencies to speed up future runs
+          python-version: '3.9'
+          cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest-xdist # Added: Installs xdist for parallel execution if not in requirements.txt
 
-      - name: Cache Playwright Browsers
-        uses: actions/cache@v3
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/*requirements.txt') }}
+      - name: Ensure Playwright Browsers are Installed
+        run: playwright install --with-deps
 
-      - name: Install Playwright Browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: playwright install --with-deps chromium webkit
-
-      - name: Install Playwright OS Dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: playwright install-deps chromium webkit
-
-      - name: Run Pytest Test Suite
+      - name: Run Pytest with Allure & HTML Reporting
+        run: |
+          pytest --html=report.html --self-contained-html --alluredir=allure-results
         env:
-          CURA_USERNAME: ${{ secrets.CURA_USERNAME || 'John Doe' }}
-          CURA_PASSWORD: ${{ secrets.CURA_PASSWORD || 'ThisIsNotAPassword' }}
-        # Upgraded: Added '-n auto' for parallel execution and '--tracing' for debugging CI failures
-        run: pytest -n auto --browser chromium --browser webkit --tracing=retain-on-failure --html=report.html --self-contained-html
+          CURA_BASE_URL: ${{ secrets.CURA_BASE_URL }}
+          CURA_USERNAME: ${{ secrets.CURA_USERNAME }}
+          CURA_PASSWORD: ${{ secrets.CURA_PASSWORD }}
 
-      - name: Upload Test Report & Traces
+      - name: Upload Pytest HTML Report Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-test-results
-          path: |
-            report.html
-            test-results/
-          retention-days: 7
+          name: pytest-html-report
+          path: report.html
+
+      - name: Upload Allure Results Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
