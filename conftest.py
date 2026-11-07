@@ -15,9 +15,7 @@ def api_context(playwright):
 
 @pytest.fixture
 def page(context):
-    base_url = os.getenv("CURA_BASE_URL", "https://katalon-demo-cura.herokuapp.com")
     page = context.new_page()
-    page.goto(f"{base_url}/profile.php#login")
     yield page
     page.close()
 
@@ -27,20 +25,25 @@ def pytest_runtest_makereport(item, call):
     report = outcome.get_result()
     extras = getattr(report, "extras", [])
 
-    if report.when == "call":
+    # Check if the test is in the 'call' phase AND it failed
+    if report.when == "call" and report.failed:
         if "page" in item.funcargs:
             page = item.funcargs["page"]
-            screenshot_bytes = page.screenshot()
-            encoded_img = base64.b64encode(screenshot_bytes).decode("utf-8")
-            html_content = (
-                f'<div>'
-                f'<img src="data:image/png;base64,{encoded_img}" alt="screenshot" '
-                f'style="width:400px; height:auto; border:1px solid #ccc; cursor:pointer;" '
-                f'onclick="window.open(this.src)" />'
-                f'</div>'
-            )
-            pytest_html = item.config.pluginmanager.getplugin("html")
-            if pytest_html is not None:
-                extras.append(pytest_html.extras.html(html_content))
+            try:
+                # Capture screenshot on failure
+                screenshot_bytes = page.screenshot()
+                encoded_img = base64.b64encode(screenshot_bytes).decode("utf-8")
+                html_content = (
+                    f'<div>'
+                    f'<img src="data:image/png;base64,{encoded_img}" alt="screenshot" '
+                    f'style="width:400px; height:auto; border:1px solid #ccc; cursor:pointer;" '
+                    f'onclick="window.open(this.src)" />'
+                    f'</div>'
+                )
+                pytest_html = item.config.pluginmanager.getplugin("html")
+                if pytest_html is not None:
+                    extras.append(pytest_html.extras.html(html_content))
+            except Exception as e:
+                print(f"Failed to capture screenshot on failure: {e}")
 
     report.extras = extras

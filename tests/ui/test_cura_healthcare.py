@@ -8,10 +8,25 @@ from pages.appointment_page import AppointmentPage
 
 load_dotenv()
 
-# Fetch credentials securely from .env, with fallbacks for the reviewer if they don't set up a .env
+# Fetch credentials securely from .env
 USERNAME = os.getenv("CURA_USERNAME", "John Doe")
 PASSWORD = os.getenv("CURA_PASSWORD", "ThisIsNotAPassword")
 BASE_URL = os.getenv("CURA_BASE_URL", "https://katalon-demo-cura.herokuapp.com")
+
+@pytest.fixture
+def auth_page(page):
+    """
+    Setup fixture to provide a pre-authenticated browser state.
+    Eliminates repetitive login code and conditional state checks in tests.
+    """
+    login_page = LoginPage(page)
+    login_page.navigate()
+    login_page.login(USERNAME, PASSWORD)
+
+    # Ensure login was successful before yielding to the test
+    expect(page).to_have_url(f"{BASE_URL}/#appointment")
+    return page
+
 
 # ==========================================
 # TC 1 & TC 2: Login Scenarios
@@ -24,38 +39,30 @@ LOGIN_DATA = [
 @pytest.mark.parametrize("username, password, is_valid", LOGIN_DATA)
 def test_login_variants(page, username, password, is_valid):
     login_page = LoginPage(page)
+    login_page.navigate()
     login_page.login(username, password)
 
     if is_valid:
         expect(page, "Login failed").to_have_url(f"{BASE_URL}/#appointment")
-        page.locator("#menu-toggle").click()
-        page.locator("text=Logout").click()
+        login_page.logout()
     else:
         expect(page, "Security flow error").to_have_url(f"{BASE_URL}/profile.php#login")
         expect(page.locator(".text-danger"), "Login validation failed").to_be_visible()
 
-# NOTE: For the rest of the tests (TC3 - TC6), replace the hardcoded "John Doe" and "ThisIsNotAPassword"
-# with the USERNAME and PASSWORD variables defined above. Replace URLs with f"{BASE_URL}/..."
 
 # ==========================================
 # TC 3: Successful Logout
 # ==========================================
-def test_successful_logout(page):
-    login_page = LoginPage(page)
+def test_successful_logout(auth_page):
+    """Uses auth_page to start in a logged-in state, skipping manual setup."""
+    login_page = LoginPage(auth_page)
+    login_page.logout()
 
-    if "profile.php#login" in page.url or page.locator("#txt-username").is_visible():
-        login_page.login("John Doe", "ThisIsNotAPassword")
-
-    # Click the menu toggle and click 'Logout'
-    page.locator("#menu-toggle").click()
-    page.locator("text=Logout").click()
-
-    # Session is completely terminated and redirected to Home page
-    expect(page, "Logout failed: User session was not terminated and redirected to the homepage.").to_have_url("https://katalon-demo-cura.herokuapp.com/")
+    expect(auth_page, "Logout failed: User session was not terminated.").to_have_url(f"{BASE_URL}/")
 
 
 # ==========================================
-# TC 4: Make Appointment with all valid data (Data-Driven)
+# TC 4: Make Appointment with all valid data
 # ==========================================
 APPOINTMENT_DATA = [
     ("Hongkong CURA Healthcare Center", "30/11/2026", "Routine checkup"),
@@ -64,38 +71,25 @@ APPOINTMENT_DATA = [
 ]
 
 @pytest.mark.parametrize("facility, date, comment", APPOINTMENT_DATA)
-def test_make_appointment_data_driven(page, facility, date, comment):
-    login_page = LoginPage(page)
-    appointment_page = AppointmentPage(page)
-
-    if "profile.php#login" in page.url or page.locator("#txt-username").is_visible():
-        login_page.login("John Doe", "ThisIsNotAPassword")
-
+def test_make_appointment_data_driven(auth_page, facility, date, comment):
+    appointment_page = AppointmentPage(auth_page)
     appointment_page.book_appointment(facility, date, comment)
 
-    expect(appointment_page.confirmation_header, "Appointment booking failed: The appointment confirmation summary was not displayed after submitting valid data.").to_be_visible()
+    expect(appointment_page.confirmation_header, "Appointment booking failed.").to_be_visible()
 
-def test_appointment_history_redirection(page):
-    login_page = LoginPage(page)
 
-    if "profile.php#login" in page.url or page.locator("#txt-username").is_visible():
-        login_page.login("John Doe", "ThisIsNotAPassword")
+def test_appointment_history_redirection(auth_page):
+    auth_page.locator("#menu-toggle").click()
+    auth_page.locator("text=History").click()
 
-    page.locator("#menu-toggle").click()
-    page.locator("text=History").click()
-
-    expect(page, "Navigation error: User was not redirected to the History page.").to_have_url("https://katalon-demo-cura.herokuapp.com/history.php#history")
+    expect(auth_page, "Navigation error: User was not redirected.").to_have_url(f"{BASE_URL}/history.php#history")
 
 
 # ==========================================
 # TC 5: Make Appointment without mandatory Visit Date
 # ==========================================
-def test_make_appointment_empty_date(page):
-    login_page = LoginPage(page)
-    appointment_page = AppointmentPage(page)
-
-    if "profile.php#login" in page.url or page.locator("#txt-username").is_visible():
-        login_page.login("John Doe", "ThisIsNotAPassword")
+def test_make_appointment_empty_date(auth_page):
+    appointment_page = AppointmentPage(auth_page)
 
     # Fill all fields except Visit Date
     appointment_page.facility_dropdown.select_option("Seoul CURA Healthcare Center")
@@ -104,30 +98,26 @@ def test_make_appointment_empty_date(page):
     appointment_page.book_btn.click()
 
     # HTML5 validation blocks the submission
-    expect(appointment_page.confirmation_header, "HTML5 Validation Bypass: The system allowed booking an appointment without a mandatory visit date.").not_to_be_visible()
+    expect(appointment_page.confirmation_header, "HTML5 Validation Bypass.").not_to_be_visible()
 
     # Verify the element is strictly required by the DOM
-    is_required = page.locator("#txt_visit_date").evaluate("el => el.required")
-    assert is_required is True, "DOM Validation Error: The visit date input field is missing the strict 'required' HTML attribute."
+    is_required = auth_page.locator("#txt_visit_date").evaluate("el => el.required")
+    assert is_required is True, "DOM Validation Error: Missing 'required' HTML attribute."
 
 
 # ==========================================
 # TC 6: Attempting to book an appointment with a past date
 # ==========================================
-def test_make_appointment_past_date(page):
-    login_page = LoginPage(page)
-    appointment_page = AppointmentPage(page)
+def test_make_appointment_past_date(auth_page):
+    appointment_page = AppointmentPage(auth_page)
 
-    if "profile.php#login" in page.url or page.locator("#txt-username").is_visible():
-        login_page.login("John Doe", "ThisIsNotAPassword")
-
-    # Dynamically calculate yesterday's date in DD/MM/YYYY format
+    # Dynamically calculate yesterday's date
     yesterday = (datetime.now() - timedelta(days=1)).strftime("%d/%m/%Y")
 
     # Input the dynamic past date
     appointment_page.book_appointment("Hongkong CURA Healthcare Center", yesterday, "Past date test")
 
     # The expected result is that the appointment should be invalid as it is outdated.
-    custom_error_msg = f"APPLICATION BUG: The system successfully booked an appointment using a past date ({yesterday}). Past dates should be blocked."
+    custom_error_msg = f"APPLICATION BUG: System successfully booked using past date ({yesterday}). Past dates should be blocked by business rules."
 
     expect(appointment_page.confirmation_header, custom_error_msg).not_to_be_visible()
