@@ -43,3 +43,6 @@ test-results/
 
 # --- macOS System Files ---
 .DS_Store
+
+# Playwright Storage State
+.auth/
