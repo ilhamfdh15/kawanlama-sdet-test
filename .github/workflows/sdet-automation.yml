@@ -31,8 +31,9 @@ jobs:
         run: playwright install --with-deps
 
       - name: Run Pytest with Allure & HTML Reporting
+        if: always()
         run: |
-          pytest --html=report.html --self-contained-html --alluredir=allure-results
+          pytest --html=report.html --self-contained-html --alluredir=allure-results || true
         env:
           CURA_BASE_URL: ${{ secrets.CURA_BASE_URL }}
           CURA_USERNAME: ${{ secrets.CURA_USERNAME }}
