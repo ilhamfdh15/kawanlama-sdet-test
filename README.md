@@ -1,9 +1,7 @@
 Markdown
 # Kawan Lama Group SDET Technical Test
 
-[![Playwright SDET Automation Tests](https://github.com/ilhamfdh15/kawanlama-sdet-test/actions/workflows/playwright.yml/badge.svg)](https://github.com/ilhamfdh15/kawanlama-sdet-test/actions/workflows/playwright.yml)
-
-This repository contains a professional UI and API automation framework built using **Python**, **Playwright**, and **Pytest**, implementing the **Page Object Model (POM)** design pattern.
+This repository contains UI and API automation framework built using **Python**, **Playwright**, and **Pytest**, implementing the **Page Object Model (POM)** design pattern.
 
 ## Enterprise-Grade Enhancements
 
@@ -26,19 +24,18 @@ The UI automation suite covers all critical positive and boundary test cases for
 ## Setup Instructions
 
 ### 1. Clone the Repository
-```bash
 git clone [https://github.com/ilhamfdh15/kawanlama-sdet-test.git](https://github.com/ilhamfdh15/kawanlama-sdet-test.git)
 cd kawanlama-sdet-test
 
-2. Create and Activate a Virtual Environment:
+### 2. Create and Activate a Virtual Environment:
    python3 -m venv .venv
    source .venv/bin/activate
 
-3. Upgrade Pip & Install Dependencies:
+### 3. Upgrade Pip & Install Dependencies:
    pip install --upgrade pip
    pip install -r requirements.txt
 
-4. Install Playwright Browsers:
+### 4. Install Playwright Browsers:
    playwright install --with-deps
 
 ## Running the Test Suite
