@@ -97,3 +97,4 @@ allure serve allure-results
 
 Every push or pull request to the `main` or `master` branch triggers the GitHub Actions pipeline.
 * **HTML Artifacts:** A standalone HTML report is available for download in the Artifacts section of each GitHub Actions run.
+* **Allure Reports:** Allure report will be available and updated on https://ilhamfdh15.github.io/kawanlama-sdet-test/ once Github Action run.
