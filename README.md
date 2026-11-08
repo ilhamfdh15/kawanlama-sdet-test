@@ -1,113 +1,100 @@
-# Kawan Lama Group SDET Technical Test
+# SDET Automation Pipeline
 
-This repository contains an enterprise-grade UI and API automation framework built using **Python**, **Playwright**, and **Pytest**, implementing the **Page Object Model (POM)** design pattern.
+Testing suite for UI (CURA Healthcare) and API (Swagger Petstore) using Python, Playwright, and Pytest.
 
-## Enterprise-Grade Enhancements
+## 🚀 Key Features & Architectural Highlights
 
-- **CI/CD Integrated:** Automated test execution via GitHub Actions on every push/PR, with HTML reports, Allure results uploaded as build artifacts, and Playwright binaries cached for speed.
-- **Session State Management:** Utilizes Playwright's `storageState` to cache authentication cookies, bypassing repetitive UI logins for massive execution speed gains.
-- **Dual Executive Reporting:** Generates both `pytest-html` self-contained summaries and interactive **Allure Reports** complete with step-by-step traces and attached failure screenshots.
-- **Secure Configuration:** Environment variables (`.env` & `python-dotenv`) used to abstract hardcoded credentials and base URLs.
-- **Atomic API Design:** API tests utilize dynamic UUID generation and `yield` teardowns to ensure zero test interdependency and prevent database bloat.
-- **Visual Reporting:** Automatically captures and embeds Base64 screenshots for all UI tests directly into both HTML and Allure reports upon failure/success.
-- **Robust Assertions:** Utilizes Playwright's built-in `expect` for auto-waiting to prevent race conditions.
-- **Cross-Browser Ready:** Natively supports execution across Chromium, Firefox, and WebKit.
+This repository implements testing patterns to ensure reliability, speed, and strict validation:
 
-## Test Coverage
+* **CI/CD Pipeline:** The GitHub Actions workflow enforces true pass/fail reporting. Tests are never masked (`|| true` is intentionally omitted) to ensure pipeline integrity. Manual triggers (`workflow_dispatch`) are also supported.
+* **Smart Session Management:**
+    * **Isolated Sessions:** Tests that mutate authentication state (like login/logout) use a fresh browser context (`page`) to prevent flaky test interactions.
+    * **Shared Sessions:** Read-only and booking tests share a cached session (`storageState` via the `auth_page` fixture) to dramatically reduce execution time.
+* **Safe API Teardown:** API tests utilize a `yield`-based cleanup pipeline. Test data (like created users) is reliably deleted during teardown, even if the primary test assertions fail.
+* **Strong Assertions:** Validates native DOM properties (e.g., HTML5 `validationMessage`), specific CSS locators, and strict URL paths. Known demo app limitations (like accepting past dates) are actively tracked using `@pytest.mark.xfail(strict=True)`.
+* **Dual Reporting:** Automatically generates Pytest-HTML reports (attached as CI artifacts) and interactive Allure reports (published to GitHub Pages) with automatic failure screenshots.
 
-### UI Automation (CURA Healthcare)
-1. **TC 1:** Successful Login with valid credentials.
-2. **TC 2:** Unsuccessful Login with invalid credentials (asserting error messages).
-3. **TC 3:** Successful Logout and session termination.
-4. **TC 4:** Make Appointment with valid data (parameterized for multiple facilities).
-5. **TC 5:** Make Appointment without mandatory Visit Date (HTML5 validation check).
-6. **TC 6:** Attempting to book an appointment with a past date (dynamic boundary test evaluating business rules).
+## 🛠️ Tech Stack
 
-### API Automation (Swagger Petstore)
-1. **Create User:** Validates payload ingestion and 200 OK response.
-2. **Get User:** Validates data retrieval matching injected state.
-3. **Update User:** Validates PUT operations with dynamic payload modification.
-4. **Delete User:** Validates explicit resource removal.
-5. **Authentication:** Validates stateless login and logout token generation endpoints.
+* **Language:** Python 3.11
+* **Framework:** Pytest
+* **Automation Tool:** Playwright (Sync API)
+* **Reporting:** Allure Report, Pytest-HTML
+* **CI/CD:** GitHub Actions
 
-## Setup Instructions
+## 📦 Project Structure
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/ilhamfdh15/kawanlama-sdet-test.git
-cd kawanlama-sdet-test
+```text
+├── .github/workflows/
+│   └── sdt-automation.yml    # CI/CD Pipeline configuration
+├── pages/
+│   ├── base_page.py          # Base POM class
+│   ├── login_page.py         # CURA Login POM
+│   └── appointment_page.py   # CURA Appointment POM (with datepicker handling)
+├── tests/
+│   ├── api/
+│   │   └── test_petstore_api.py   # API test scenarios with yield teardown
+│   └── ui/
+│       └── test_cura_healthcare.py # UI test scenarios (isolated vs shared sessions)
+├── .env.example              # Template for environment variables
+├── conftest.py               # Global fixtures (auth, API context, reporting hooks)
+├── pytest.ini                # Pytest configuration
+├── requirements.txt          # Python dependencies
+└── README.md                 # Project documentation
 ```
 
-### 2. Create and Activate a Virtual Environment
+## ⚙️ Local Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/ilhamfdh15/kawanlama-sdet-test.git
+   cd kawanlama-sdet-test
+   ```
+
+2. **Set up a virtual environment:**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies and Playwright browsers:**
+   ```bash
+   pip install -r requirements.txt
+   playwright install --with-deps
+   ```
+
+4. **Environment Variables:**
+   Create a `.env` file in the root directory and add the following:
+   ```env
+   CURA_BASE_URL=https://katalon-demo-cura.herokuapp.com
+   CURA_USERNAME=John Doe
+   CURA_PASSWORD=ThisIsNotAPassword
+   ```
+
+## ▶️ Running Tests
+
+**Run all tests (API & UI) with Allure reporting:**
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+pytest --alluredir=allure-results
 ```
 
-### 3. Upgrade Pip & Install Dependencies
+**Run only UI tests:**
 ```bash
-pip install --upgrade pip
-pip install -r requirements.txt
+pytest tests/ui/
 ```
 
-### 4. Install Playwright Browsers
+**Run only API tests:**
 ```bash
-playwright install --with-deps
+pytest tests/api/
 ```
 
-## Running the Test Suite
-Make sure your virtual environment is active (`source .venv/bin/activate`), then run the tests using the following commands:
-
-- **Run All Tests (UI & API):**
-  ```bash
-  pytest -v tests/
-  ```
-
-- **Run Only API Tests:**
-  ```bash
-  pytest -v tests/api/test_petstore_api.py
-  ```
-
-- **Run Only UI Tests:**
-  ```bash
-  pytest -v tests/ui/test_cura_healthcare.py
-  ```
-
-- **Run Cross-Browser Tests:**
-  ```bash
-  pytest --browser chromium --browser webkit tests/ui/
-  ```
-
-## Generating Test Reports with Embedded Screenshots
-To execute the test suite and automatically generate a shareable HTML test summary report alongside raw metrics for Allure:
-```bash
-pytest --html=report.html --self-contained-html --alluredir=allure-results
-```
-
-## 📊 Test Execution Metrics & Reporting
-
-The framework generates a rich, self-contained HTML report using `pytest-html` alongside raw metrics for the **Allure Framework**, capturing failure screenshots in both formats.
-
-### Suite Breakdown
-
-| Module | Total Tests | Passed | Expected Failures | Core Coverage Areas |
-| :--- | :---: | :---: | :---: | :--- |
-| **UI Automation (Cura)** | 9 | 8 | 1 | Data-driven login variants, Appointment CRUD, History routing, Negative date validation |
-| **API Automation (Petstore)** | 7 | 7 | 0 | Atomic user generation, Authentication state, Data updates, Isolated teardown |
-| **Total Pipeline** | **16** | **15** | **1** | |
-
-> **Note on Expected Failure:** The single UI failure (`test_make_appointment_past_date`) is a deliberately engineered negative test. It validates application boundaries and successfully catches a business logic bug where the system improperly accepts historical dates for future appointments.
-
-## Viewing Test Reports
-
-### Pytest-HTML Report:
-Open the standalone HTML file in any web browser to view your test results with embedded Base64 failure screenshots:
-```bash
-open report.html
-```
-
-### Allure Interactive Dashboard:
-Compile and serve the rich Allure results dashboard locally (requires Allure command-line tool / `brew install allure`):
+**View Allure Report Locally:**
 ```bash
 allure serve allure-results
 ```
+
+## 📊 CI/CD and Reporting
+
+Every push or pull request to the `main` or `master` branch triggers the GitHub Actions pipeline.
+* **Allure Dashboard:** Upon completion, the Allure report is automatically deployed to GitHub Pages. You can view the live report at: `https://<your-username>.github.io/kawanlama-sdet-test/`
+* **HTML Artifacts:** A standalone HTML report is available for download in the Artifacts section of each GitHub Actions run.
