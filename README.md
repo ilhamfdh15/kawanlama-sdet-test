@@ -96,5 +96,4 @@ allure serve allure-results
 ## 📊 CI/CD and Reporting
 
 Every push or pull request to the `main` or `master` branch triggers the GitHub Actions pipeline.
-* **Allure Dashboard:** Upon completion, the Allure report is automatically deployed to GitHub Pages. You can view the live report at: `https://<your-username>.github.io/kawanlama-sdet-test/`
 * **HTML Artifacts:** A standalone HTML report is available for download in the Artifacts section of each GitHub Actions run.
